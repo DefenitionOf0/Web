@@ -1,0 +1,32 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.App {
+  display: flex;
+  height: 100vh;
+}
+
+#root {
+  display: flex;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+h3, h4 {
+  margin: 10px 0;
+}
+
+textarea {
+  width: 100%;
+  height: 150px;
+  font-family: monospace;
+}
