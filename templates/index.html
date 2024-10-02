@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw by Coordinates</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+        }
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 80vh;
+            overflow: hidden;
+        }
+        #drawingCanvas, #gridCanvas {
+            position: absolute;
+            left: 0;
+            top: 0;
+            border: 1px solid black;
+        }
+        #toolbar {
+            height: 20%;
+        }
+        canvas {
+            cursor: grab;
+        }
+        canvas.drawing-mode {
+            cursor: crosshair;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-9">
+                <div id="canvas-container">
+                    <canvas id="gridCanvas" width="1000" height="700"></canvas>
+                    <canvas id="drawingCanvas" width="1000" height="700"></canvas>
+                </div>
+                <div></div>
+            </div>
+            <div class="col-md-3" id="toolbar">
+                <h3>Toolbar</h3>
+                <div>
+                    <label for="grid-size">Grid Size (mm):</label>
+                    <input type="number" id="grid-size" value="1" max="1" min="1">
+                </div>
+                <div>
+                    <label for="color">Line Color:</label>
+                    <input type="color" id="color" value="#000000">
+                </div>
+                <div>
+                    <label for="point-color">Point Color:</label>
+                    <input type="color" id="point-color" value="#ff0000">
+                </div>
+                <div>
+                    <label for="point-size">Point Size (px):</label>
+                    <input type="number" id="point-size" value="100" min="100" max="100">
+                </div>
+                <div>
+                    <button id="undo" class="btn btn-secondary">Undo</button>
+                    <button id="redo" class="btn btn-secondary">Redo</button>
+                </div>
+                <div>
+                    <h5>Points</h5>
+                    <ul id="points-list"></ul>
+                </div>
+                <div>
+                    <h5>Upload Background</h5>
+                    <input type="file" id="uploadImage">
+                    <div>
+                    <label for="transparency">Transparency:</label>
+                    <input type="range" id="transparency" min="0" max="1" step="0.1" value="1">
+                    </div>
+                </div>
+                <div>
+                    <label for="zoom">Zoom (Canvas):</label>
+                    <input type="range" id="zoom" min="30" max="100" step="0.1" value="30">
+                </div>
+                <div>
+                    <label for="background-zoom">Zoom (Background):</label>
+                    <input type="range" id="background-zoom" min="0.1" max="1" step="0.1" value="0.5">
+                </div>
+                <div>
+                    <button id="toggle-mode" class="btn btn-primary">Switch to Draw Mode</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const gridCanvas = document.getElementById('gridCanvas');
+        const gridCtx = gridCanvas.getContext('2d');
+
+        const pointsList = document.getElementById('points-list');
+        let points = [];
+        let undoStack = [];
+        let redoStack = [];
+        let backgroundImage = new Image();
+        let backgroundLoaded = false;
+        let zoomLevel = 30;
+        let backgroundZoomLevel = 0.5; 
+        let isDragging = false;
+        let isDrawing = false; // Default to pan mode
+        let startX, startY;
+        let offsetX = 0, offsetY = 0;
+        let backgroundOffsetX = 0, backgroundOffsetY = 0;
+
+        // Function to redraw the entire canvas (grid, points, lines)
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear drawing canvas
+            drawBackground(); // Draw the background first
+            points.forEach((point, index) => {
+                drawPoint(point);
+                if (index > 0) {
+                    drawLine(points[index - 1], points[index]);
+                }
+            });
+        }
+
+        // Function to draw the background image, centered on (0, 0)
+        function drawBackground() {
+            if (backgroundLoaded) {
+                const transparency = parseFloat(document.getElementById('transparency').value);
+                ctx.globalAlpha = transparency;
+
+                const centerX = canvas.width / 2 + offsetX; // Center relative to the canvas
+                const centerY = canvas.height / 2 + offsetY;
+
+                // Center the image at (0, 0)
+                ctx.drawImage(
+                    backgroundImage,
+                    centerX - (backgroundImage.width * backgroundZoomLevel) / 2,
+                    centerY - (backgroundImage.height * backgroundZoomLevel) / 2,
+                    backgroundImage.width * backgroundZoomLevel,
+                    backgroundImage.height * backgroundZoomLevel
+                );
+
+                ctx.globalAlpha = 1;  // Reset transparency after background
+            }
+        }
+
+        // Function to draw the grid
+        function drawGrid(gridSize) {
+            gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height); // Clear grid canvas
+            gridCtx.strokeStyle = "rgba(0, 0, 0, 0.4)"; // Light grey grid with transparency
+
+            const scaledGridSize = gridSize * zoomLevel;
+            const originX = gridCanvas.width / 2 + offsetX;
+            const originY = gridCanvas.height / 2 + offsetY;
+
+            // Draw vertical grid lines
+            for (let x = originX % scaledGridSize; x <= gridCanvas.width; x += scaledGridSize) {
+                gridCtx.beginPath();
+                gridCtx.moveTo(x, 0);
+                gridCtx.lineTo(x, gridCanvas.height);
+                gridCtx.stroke();
+            }
+
+            // Draw horizontal grid lines
+            for (let y = originY % scaledGridSize; y <= gridCanvas.height; y += scaledGridSize) {
+                gridCtx.beginPath();
+                gridCtx.moveTo(0, y);
+                gridCtx.lineTo(gridCanvas.width, y);
+                gridCtx.stroke();
+            }
+
+            // Draw X and Y axes
+            gridCtx.strokeStyle = "#000";
+            gridCtx.beginPath();
+            gridCtx.moveTo(originX, 0); // Y-axis
+            gridCtx.lineTo(originX, gridCanvas.height);
+            gridCtx.stroke();
+
+            gridCtx.beginPath();
+            gridCtx.moveTo(0, originY); // X-axis
+            gridCtx.lineTo(gridCanvas.width, originY);
+            gridCtx.stroke();
+        }
+
+        // Function to draw a line between two points (fix coordinates for zoom)
+        function drawLine(point1, point2) {
+            const canvasCenterX = canvas.width / 2;
+            const canvasCenterY = canvas.height / 2;
+            ctx.beginPath();
+            // Adjust for zoom and offset, positioning relative to center of canvas
+            ctx.moveTo((point1.x * zoomLevel) + canvasCenterX + offsetX, (point1.y * zoomLevel) + canvasCenterY + offsetY);
+            ctx.lineTo((point2.x * zoomLevel) + canvasCenterX + offsetX, (point2.y * zoomLevel) + canvasCenterY + offsetY);
+            ctx.strokeStyle = document.getElementById('color').value;
+            ctx.stroke();
+        }
+
+        // Function to draw a point (fix coordinates for zoom)
+        function drawPoint(point) {
+            const pointSize = parseInt(document.getElementById('point-size').value);
+            const pointColor = document.getElementById('point-color').value;
+            const canvasCenterX = canvas.width / 2;
+            const canvasCenterY = canvas.height / 2;
+            ctx.fillStyle = pointColor;
+            ctx.beginPath();
+            // Adjust for zoom and offset, positioning relative to center of canvas
+            ctx.arc((point.x * zoomLevel) + canvasCenterX + offsetX, (point.y * zoomLevel) + canvasCenterY + offsetY, pointSize / zoomLevel + 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Handling mouse clicks for drawing points and lines
+        canvas.addEventListener('mousedown', (e) => {
+            if (isDrawing) {
+                const rect = canvas.getBoundingClientRect();
+                const canvasCenterX = canvas.width / 2;
+                const canvasCenterY = canvas.height / 2;
+                const x = (e.clientX - rect.left - canvasCenterX - offsetX) / zoomLevel; // Adjust for zoom and offset
+                const y = (e.clientY - rect.top - canvasCenterY - offsetY) / zoomLevel; // Adjust for zoom and offset
+
+                points.push({x: x, y: y});
+                updatePointsList();
+                drawPoint({x: x, y: y});
+                if (points.length > 1) {
+                    drawLine(points[points.length - 2], points[points.length - 1]);
+                }
+            }
+        });
+
+        // Handle dragging the canvas (for moving around when zoomed)
+        canvas.addEventListener('mousedown', (e) => {
+            if (!isDrawing) {
+                isDragging = true;
+                startX = e.clientX - offsetX;
+                startY = e.clientY - offsetY;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging && !isDrawing) {
+                offsetX = e.clientX - startX;
+                offsetY = e.clientY - startY;
+                drawGrid(parseInt(document.getElementById('grid-size').value));
+                redrawCanvas();  // Redraw after movement
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        // Update points list on the toolbar
+        function updatePointsList() {
+            pointsList.innerHTML = '';
+            points.forEach((point, index) => {
+                let li = document.createElement('li');
+                li.textContent = `Point ${index + 1}: (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`;
+                pointsList.appendChild(li);
+            });
+        }
+
+        // Undo the last drawing action
+        document.getElementById('undo').addEventListener('click', () => {
+            if (points.length > 0) {
+                undoStack.push(points.pop());
+                redrawCanvas();
+                updatePointsList();
+            }
+        });
+
+        // Redo the last undone action
+        document.getElementById('redo').addEventListener('click', () => {
+            if (undoStack.length > 0) {
+                points.push(undoStack.pop());
+                redrawCanvas();
+                updatePointsList();
+            }
+        });
+
+        // Update the grid size on change
+        document.getElementById('grid-size').addEventListener('change', () => {
+            drawGrid(parseInt(document.getElementById('grid-size').value));
+        });
+
+        // Upload and set background image
+        document.getElementById('uploadImage').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    backgroundImage.src = event.target.result;
+                    backgroundImage.onload = () => {
+                        backgroundLoaded = true;
+                        redrawCanvas(); // Ensure background is drawn
+                    };
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle transparency change
+        document.getElementById('transparency').addEventListener('input', () => {
+            redrawCanvas();
+        });
+
+        // Handle canvas zoom change
+        document.getElementById('zoom').addEventListener('input', (e) => {
+            zoomLevel = parseFloat(e.target.value);
+            drawGrid(parseInt(document.getElementById('grid-size').value));
+            redrawCanvas();
+        });
+
+        // Handle background zoom change
+        document.getElementById('background-zoom').addEventListener('input', (e) => {
+            backgroundZoomLevel = parseFloat(e.target.value);
+            redrawCanvas();
+        });
+
+        // Toggle between drawing mode and pan mode
+        document.getElementById('toggle-mode').addEventListener('click', () => {
+            isDrawing = !isDrawing;
+            if (isDrawing) {
+                canvas.classList.add('drawing-mode');
+                document.getElementById('toggle-mode').textContent = 'Switch to Pan Mode';
+            } else {
+                canvas.classList.remove('drawing-mode');
+                document.getElementById('toggle-mode').textContent = 'Switch to Draw Mode';
+            }
+        });
+
+        // Initial grid draw
+        drawGrid(10);
+    </script>
+</body>
+</html>
