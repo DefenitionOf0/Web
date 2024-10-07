@@ -41,16 +41,15 @@
         <div class="row">
             <div class="col-md-9">
                 <div id="canvas-container">
-                    <canvas id="gridCanvas" width="1000" height="700"></canvas>
-                    <canvas id="drawingCanvas" width="1000" height="700"></canvas>
+                    <canvas id="gridCanvas" width="1600" height="1200"></canvas>
+                    <canvas id="drawingCanvas" width="1600" height="1200"></canvas>
                 </div>
-                <div></div>
             </div>
             <div class="col-md-3" id="toolbar">
                 <h3>Toolbar</h3>
                 <div>
                     <label for="grid-size">Grid Size (mm):</label>
-                    <input type="number" id="grid-size" value="1" max="1" min="1">
+                    <input type="number" id="grid-size" value="10" min="1">
                 </div>
                 <div>
                     <label for="color">Line Color:</label>
@@ -62,7 +61,7 @@
                 </div>
                 <div>
                     <label for="point-size">Point Size (px):</label>
-                    <input type="number" id="point-size" value="100" min="100" max="100">
+                    <input type="number" id="point-size" value="5" min="1">
                 </div>
                 <div>
                     <button id="undo" class="btn btn-secondary">Undo</button>
@@ -75,14 +74,12 @@
                 <div>
                     <h5>Upload Background</h5>
                     <input type="file" id="uploadImage">
-                    <div>
                     <label for="transparency">Transparency:</label>
                     <input type="range" id="transparency" min="0" max="1" step="0.1" value="1">
-                    </div>
                 </div>
                 <div>
                     <label for="zoom">Zoom (Canvas):</label>
-                    <input type="range" id="zoom" min="30" max="100" step="0.1" value="30">
+                    <input type="range" id="zoom" min="1" max="3" step="0.1" value="1">
                 </div>
                 <div>
                     <label for="background-zoom">Zoom (Background):</label>
@@ -90,6 +87,9 @@
                 </div>
                 <div>
                     <button id="toggle-mode" class="btn btn-primary">Switch to Draw Mode</button>
+                </div>
+                <div>
+                    <button id="toggle-draw-type" class="btn btn-primary">Switch to Arc Mode</button>
                 </div>
             </div>
         </div>
@@ -105,27 +105,37 @@
         const gridCtx = gridCanvas.getContext('2d');
 
         const pointsList = document.getElementById('points-list');
-        let points = [];
+        let points = [{x:0,y:0,type:'zero_point'}];
+        let lastPoint = null;
         let undoStack = [];
         let redoStack = [];
         let backgroundImage = new Image();
         let backgroundLoaded = false;
-        let zoomLevel = 30;
+        let zoomLevel = 1;
         let backgroundZoomLevel = 0.5; 
         let isDragging = false;
         let isDrawing = false; // Default to pan mode
         let startX, startY;
         let offsetX = 0, offsetY = 0;
         let backgroundOffsetX = 0, backgroundOffsetY = 0;
+        let drawType = 'line'; // Can be 'line' or 'arc'
+        let arcRadius = null;  // Radius for the arc
+        let isFirstArcPointSet = false; // Track if the first point of the arc is set
 
-        // Function to redraw the entire canvas (grid, points, lines)
+        // Function to redraw the entire canvas (grid, points, lines, arcs)
         function redrawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear drawing canvas
             drawBackground(); // Draw the background first
-            points.forEach((point, index) => {
-                drawPoint(point);
-                if (index > 0) {
-                    drawLine(points[index - 1], points[index]);
+            for (p of points) {
+                drawPoint(p);
+                if (p.type === 'arc') {
+                    drawArc(lastPoint, p, p.radius)
+                    lastPoint = p;// Draw arc
+                } else if (p.type === 'line'){
+                    drawLine(lastPoint, p)
+                    lastPoint = p;// Draw line
+                } else (p.type === 'zero_point'){
+                    lastPoint = p;
                 }
             });
         }
@@ -155,9 +165,9 @@
         // Function to draw the grid
         function drawGrid(gridSize) {
             gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height); // Clear grid canvas
-            gridCtx.strokeStyle = "rgba(0, 0, 0, 0.4)"; // Light grey grid with transparency
+            gridCtx.strokeStyle = "rgba(0, 0, 0, 0.6)"; // Light grey grid with transparency
 
-            const scaledGridSize = gridSize * zoomLevel;
+            const scaledGridSize = gridSize * zoomLevel; // Apply zoom level to grid size
             const originX = gridCanvas.width / 2 + offsetX;
             const originY = gridCanvas.height / 2 + offsetY;
 
@@ -190,45 +200,117 @@
             gridCtx.stroke();
         }
 
-        // Function to draw a line between two points (fix coordinates for zoom)
-        function drawLine(point1, point2) {
+        // Function to calculate the nearest intersection for snapping
+        function getSnappedPoint(x, y, gridSize) {
+            const scaledGridSize = gridSize; // No zoom scaling for snapping
+            // Snap x and y to nearest grid line
+            const snappedX = Math.round(x / scaledGridSize) * scaledGridSize;
+            const snappedY = Math.round(y / scaledGridSize) * scaledGridSize;
+
+            return { x: snappedX, y: snappedY };
+        }
+
+        // Function to convert screen coordinates to world coordinates for correct positioning when zoomed
+        function screenToWorld(screenX, screenY) {
             const canvasCenterX = canvas.width / 2;
             const canvasCenterY = canvas.height / 2;
+            return {
+                x: (screenX - canvasCenterX - offsetX) / zoomLevel,
+                y: (screenY - canvasCenterY - offsetY) / zoomLevel
+            };
+        }
+
+        // Function to convert world coordinates to screen coordinates for drawing
+        function worldToScreen(point) {
+            const canvasCenterX = canvas.width / 2;
+            const canvasCenterY = canvas.height / 2;
+            return {
+                x: (point.x * zoomLevel) + canvasCenterX + offsetX,
+                y: (point.y * zoomLevel) + canvasCenterY + offsetY
+            };
+        }
+
+        // Function to draw a line between two points
+        function drawLine(point1, point2) {
+            const screenPoint1 = worldToScreen(point1);
+            const screenPoint2 = worldToScreen(point2);
             ctx.beginPath();
-            // Adjust for zoom and offset, positioning relative to center of canvas
-            ctx.moveTo((point1.x * zoomLevel) + canvasCenterX + offsetX, (point1.y * zoomLevel) + canvasCenterY + offsetY);
-            ctx.lineTo((point2.x * zoomLevel) + canvasCenterX + offsetX, (point2.y * zoomLevel) + canvasCenterY + offsetY);
+            ctx.moveTo(screenPoint1.x, screenPoint1.y);
+            ctx.lineTo(screenPoint2.x, screenPoint2.y);
             ctx.strokeStyle = document.getElementById('color').value;
             ctx.stroke();
         }
 
-        // Function to draw a point (fix coordinates for zoom)
+        // Function to draw an arc between two points with a specified radius
+        function drawArc(point1, point2, radius) {
+            const screenPoint1 = worldToScreen(point1);
+            const screenPoint2 = worldToScreen(point2);
+
+            const dx = screenPoint2.x - screenPoint1.x;
+            const dy = screenPoint2.y - screenPoint1.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Calculate the midpoint between the two points
+            const midX = (screenPoint1.x + screenPoint2.x) / 2;
+            const midY = (screenPoint1.y + screenPoint2.y) / 2;
+
+            // Calculate the normal vector (perpendicular to the line connecting the points)
+            const normalX = -dy / distance;
+            const normalY = dx / distance;
+
+            // Calculate the center of the arc
+            const centerX = midX + normalX * Math.sqrt(radius * radius - (distance / 2) * (distance / 2));
+            const centerY = midY + normalY * Math.sqrt(radius * radius - (distance / 2) * (distance / 2));
+
+            // Calculate the start and end angles for the arc
+            const startAngle = Math.atan2(screenPoint1.y - centerY, screenPoint1.x - centerX);
+            const endAngle = Math.atan2(screenPoint2.y - centerY, screenPoint2.x - centerX);
+
+            // Draw the arc
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
+            ctx.strokeStyle = document.getElementById('color').value;
+            ctx.stroke();
+        }
+
+        // Function to draw a point
         function drawPoint(point) {
             const pointSize = parseInt(document.getElementById('point-size').value);
             const pointColor = document.getElementById('point-color').value;
-            const canvasCenterX = canvas.width / 2;
-            const canvasCenterY = canvas.height / 2;
+            const screenPoint = worldToScreen(point);
             ctx.fillStyle = pointColor;
             ctx.beginPath();
-            // Adjust for zoom and offset, positioning relative to center of canvas
-            ctx.arc((point.x * zoomLevel) + canvasCenterX + offsetX, (point.y * zoomLevel) + canvasCenterY + offsetY, pointSize / zoomLevel + 1, 0, Math.PI * 2);
+            ctx.arc(screenPoint.x, screenPoint.y, pointSize / zoomLevel, 0, Math.PI * 2); // Adjust size for zoom
             ctx.fill();
         }
 
-        // Handling mouse clicks for drawing points and lines
+        // Handling mouse clicks for drawing points, lines, and arcs
         canvas.addEventListener('mousedown', (e) => {
-            if (isDrawing) {
-                const rect = canvas.getBoundingClientRect();
-                const canvasCenterX = canvas.width / 2;
-                const canvasCenterY = canvas.height / 2;
-                const x = (e.clientX - rect.left - canvasCenterX - offsetX) / zoomLevel; // Adjust for zoom and offset
-                const y = (e.clientY - rect.top - canvasCenterY - offsetY) / zoomLevel; // Adjust for zoom and offset
+            const rect = canvas.getBoundingClientRect();
+            const worldPoint = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+            const snappedPoint = getSnappedPoint(worldPoint.x, worldPoint.y, parseInt(document.getElementById('grid-size').value));
 
-                points.push({x: x, y: y});
-                updatePointsList();
-                drawPoint({x: x, y: y});
-                if (points.length > 1) {
-                    drawLine(points[points.length - 2], points[points.length - 1]);
+            if (isDrawing) {
+                if (drawType === 'line') {
+                    points.push({ x: snappedPoint.x, y: snappedPoint.y, type: 'line' });
+                    updatePointsList();
+                    drawPoint({ x: snappedPoint.x, y: snappedPoint.y });
+                    if (points.length > 1) {
+                        drawLine(points[points.length - 2], points[points.length - 1]);
+                    }
+                } else if (drawType === 'arc') {
+                     
+                    // Set the second point and draw the arc
+                    const firstPoint = points[points.length - 1];
+                    
+                    drawPoint({ x: snappedPoint.x, y: snappedPoint.y });
+                    arcRadius = parseFloat(prompt("Enter arc radius in mm:"));
+                    points.push({ x: snappedPoint.x, y: snappedPoint.y, fp: firstPoint, radius: arcRadius, type: 'arc' });
+                    updatePointsList();
+                    drawArc(firstPoint, points[points.length - 1], arcRadius);
+                    isFirstArcPointSet = false; // Reset for next arc
+                    arcRadius = null;
+                    
                 }
             }
         });
@@ -335,6 +417,17 @@
             } else {
                 canvas.classList.remove('drawing-mode');
                 document.getElementById('toggle-mode').textContent = 'Switch to Draw Mode';
+            }
+        });
+
+        // Toggle between line and arc drawing
+        document.getElementById('toggle-draw-type').addEventListener('click', () => {
+            if (drawType === 'line') {
+                drawType = 'arc';
+                document.getElementById('toggle-draw-type').textContent = 'Switch to Line Mode';
+            } else {
+                drawType = 'line';
+                document.getElementById('toggle-draw-type').textContent = 'Switch to Arc Mode';
             }
         });
 
