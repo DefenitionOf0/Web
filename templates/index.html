@@ -106,7 +106,6 @@
 
         const pointsList = document.getElementById('points-list');
         let points = [{x:0,y:0,type:'zero_point'}];
-        let lastPoint = null;
         let undoStack = [];
         let redoStack = [];
         let backgroundImage = new Image();
@@ -122,21 +121,24 @@
         let arcRadius = null;  // Radius for the arc
         let isFirstArcPointSet = false; // Track if the first point of the arc is set
 
+        let lastPoint = [];
         // Function to redraw the entire canvas (grid, points, lines, arcs)
         function redrawCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear drawing canvas
             drawBackground(); // Draw the background first
-            for (p of points) {
+            points.forEach((p, index) => {
                 drawPoint(p);
-                if (p.type === 'arc') {
-                    drawArc(lastPoint, p, p.radius)
-                    lastPoint = p;// Draw arc
-                } else if (p.type === 'line'){
-                    drawLine(lastPoint, p)
-                    lastPoint = p;// Draw line
-                } else (p.type === 'zero_point'){
-                    lastPoint = p;
-                }
+               // if (index > 0) {
+                    if (p.type === 'arc') {
+                        drawArc(lastPoint, p, p.radius * zoomLevel)
+                        lastPoint = p;// Draw arc
+                    } else if (p.type === 'line'){
+                        drawLine(lastPoint, p)
+                        lastPoint = p;// Draw line
+                    } else if (p.type === 'zero_point'){
+                        lastPoint = p;
+                    }
+                //} else if
             });
         }
 
