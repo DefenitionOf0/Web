@@ -141,7 +141,7 @@
         drawPoint(p);
         // if (index > 0) {
         if (p.type === 'arc') {
-            drawArc(lastPoint, p, p.radius * zoomLevel)
+            drawArc(lastPoint, p, p.radius * (zoomLevel / 30));
             lastPoint = p; // Draw arc
         } else if (p.type === 'line') {
             drawLine(lastPoint, p)
