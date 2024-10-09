@@ -58,7 +58,7 @@
         </div>
                 <div>
                     <label for="grid-size">Grid Size (mm):</label>
-                    <input type="number" id="grid-size" value="10" min="1" max="1">
+                    <input type="reset" id="grid-size" value="1">
         </div>
                 <div>
                     <label for="color">Line Color:</label>
@@ -69,8 +69,8 @@
                     <input type="color" id="point-color" value="#ff0000">
         </div>
                 <div>
-                    <label for="point-size">Point Size (px):</label>
-                    <input type="number" id="point-size" value="5" min="1">
+                    <label for="point-size">Point Size:</label>
+                    <input type="reset" id="point-size" value="70" min="1">
         </div>
                 <div>
                     <button id="undo" class="btn btn-secondary">Undo</button>
@@ -85,7 +85,7 @@
         </div>
                 <div>
                     <label for="zoom">Zoom (Canvas):</label>
-                    <input type="range" id="zoom" min="1" max="3" step="0.1" value="1">
+                    <input type="range" id="zoom" min="30" max="100" step="0.1" value="30">
         </div>
                 <div>
                     <label for="background-zoom">Zoom (Background):</label>
@@ -113,15 +113,15 @@
 
         const gridCanvas = document.getElementById('gridCanvas');
         const gridCtx = gridCanvas.getContext('2d');
-        let zpx = parseFloat(document.getElementById('zero_pointx').value);
-        let zpy = parseFloat(document.getElementById('zero_pointy').value);
+        let zpx = parseInt(document.getElementById('zero_pointx').value);
+        let zpy = parseInt(document.getElementById('zero_pointy').value);
         const pointsList = document.getElementById('points-list');
         let points = [{x: zpx, y: zpy, type: 'zero_point'}];
         let undoStack = [];
         let redoStack = [];
         let backgroundImage = new Image();
         let backgroundLoaded = false;
-        let zoomLevel = 1;
+        let zoomLevel = 30;
         let backgroundZoomLevel = 0.5;
         let isDragging = false;
         let isDrawing = false; // Default to pan mode
@@ -251,7 +251,7 @@
     const screenPoint1 = worldToScreen(point1);
     const screenPoint2 = worldToScreen(point2);
     ctx.beginPath();
-    ctx.moveTo(screenPoint1.x, sc8reenPoint1.y);
+    ctx.moveTo(screenPoint1.x, screenPoint1.y);
     ctx.lineTo(screenPoint2.x, screenPoint2.y);
     ctx.strokeStyle = document.getElementById('color').value;
     ctx.stroke();
@@ -338,9 +338,10 @@
 
         }
     }
+    });
+    canvas.addEventListener('touchend', function() {
     canvas.removeEventListener('touchend', arguments.callee);
     });
-
         // Handle dragging the canvas (for moving around when zoomed)
         canvas.addEventListener('touchstart', function(event) {
     event.preventDefault();
