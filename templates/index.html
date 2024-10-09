@@ -47,6 +47,15 @@
             </div>
             <div class="col-md-3" id="toolbar">
                 <h3>Toolbar</h3>
+.               <div>
+                    <label for="zero_pointx">Zero point X:</label>
+                    <input type="number" id="zero_pointx" value="0" min="0">
+                </div>
+                <div>
+.               <div>
+                    <label for="zero_pointy">Zero point Y:</label>
+                    <input type="number" id="zero_pointy" value="0" min="0">
+                </div>
                 <div>
                     <label for="grid-size">Grid Size (mm):</label>
                     <input type="number" id="grid-size" value="10" min="1">
@@ -103,9 +112,10 @@
 
         const gridCanvas = document.getElementById('gridCanvas');
         const gridCtx = gridCanvas.getContext('2d');
-
+.       let zpx = parseFloat(document.getElementById('zero_pointx').value);
+.       let zpy = parseFloat(document.getElementById('zero_pointy').value);
         const pointsList = document.getElementById('points-list');
-        let points = [{x:0,y:0,type:'zero_point'}];
+        let points = [{x: zpx,y:zpy,type:'zero_point'}];
         let undoStack = [];
         let redoStack = [];
         let backgroundImage = new Image();
@@ -335,11 +345,11 @@
             }
         });
 
-        canvas.addEventListener('touchstop', () => {
+        canvas.addEventListener('touchend', () => {
             isDragging = false;
         });
 
-        canvas.addEventListener('touchleave', () => {
+        canvas.addEventListener('touchcancel', () => {
             isDragging = false;
         });
 
