@@ -47,12 +47,12 @@
             </div>
             <div class="col-md-3" id="toolbar">
                 <h3>Toolbar</h3>
-.               <div>
+                <div>
                     <label for="zero_pointx">Zero point X:</label>
                     <input type="number" id="zero_pointx" value="0" min="0">
                 </div>
                 <div>
-.               <div>
+                <div>
                     <label for="zero_pointy">Zero point Y:</label>
                     <input type="number" id="zero_pointy" value="0" min="0">
                 </div>
@@ -328,12 +328,13 @@
         });
 
         // Handle dragging the canvas (for moving around when zoomed)
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault()
+        canvas.addEventListener('touchstart', function(event) => {
+            event.preventDefault()
+            let touch = event.touches[0];
             if (!isDrawing) {
                 isDragging = true;
-                startX = e.clientX - offsetX;
-                startY = e.clientY - offsetY;
+                startX = touch.clientX - offsetX;
+                startY = touch.clientY - offsetY;
             }
         });
 
