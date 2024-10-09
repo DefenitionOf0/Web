@@ -327,9 +327,9 @@
             drawPoint({
                 x: snappedPoint.x, y: snappedPoint.y
             });
-            arcRadius = parseFloat(prompt("Enter arc radius in mm:"));
+            arcRadius = parseFloat(prompt("Введите радиус в мм:"));
             points.push({
-                x: snappedPoint.x, y: snappedPoint.y, fp: firstPoint, radius: arcRadius, type: 'arc'
+                x: snappedPoint.x, y: snappedPoint.y, fp: firstPoint, radius: (arcRadius * 30), type: 'arc'
             });
             updatePointsList();
             drawArc(firstPoint, points[points.length - 1], arcRadius);
