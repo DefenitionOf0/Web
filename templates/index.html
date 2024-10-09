@@ -350,9 +350,9 @@
         });
 
         canvas.addEventListener('touchend', () => {        
-             canvas.removeEventListener('touchend', canvas);
-            canvas.removeEventListener('touchmove', canvas);
-            isDragging = false;
+                canvas.removeEventListener('touchmove', canvas);
+                canvas.removeEventListener('touchend', arguments.callee);
+                isDragging = false;
         });
 
         // Update points list on the toolbar
