@@ -329,7 +329,7 @@
 
         // Handle dragging the canvas (for moving around when zoomed)
         canvas.addEventListener('touchstart', function(event) => {
-            event.preventDefault()
+            event.preventDefault();
             let touch = event.touches[0];
             if (!isDrawing) {
                 isDragging = true;
@@ -338,21 +338,20 @@
             }
         });
 
-        canvas.addEventListener('touchmove', (e) => { 
-            e.preventDefault()
+        canvas.addEventListener('touchmove', function(event) => {
+            event.preventDefault();
+            let touch = event.touches[0];
             if (isDragging && !isDrawing) {
-                offsetX = e.clientX - startX;
-                offsetY = e.clientY - startY;
+                offsetX = touch.clientX - startX;
+                offsetY = touch.clientY - startY;
                 drawGrid(parseInt(document.getElementById('grid-size').value));
                 redrawCanvas();  // Redraw after movement
             }
         });
 
-        canvas.addEventListener('touchend', () => {
-            isDragging = false;
-        });
-
-        canvas.addEventListener('touchcancel', () => {
+        canvas.addEventListener('touchend', () => {        
+             canvas.removeEventListener('touchend', canvas);
+            canvas.removeEventListener('touchmove', canvas);
             isDragging = false;
         });
 
