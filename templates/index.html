@@ -58,7 +58,7 @@
         </div>
                 <div>
                     <label for="grid-size">Grid Size (mm):</label>
-                    <input type="number" id="grid-size" value="10" min="1" max ="1">
+                    <input type="number" id="grid-size" value="10" min="1" max="1">
         </div>
                 <div>
                     <label for="color">Line Color:</label>
@@ -301,9 +301,10 @@
     }
 
         // Handling mouse clicks for drawing points, lines, and arcs
-        canvas.addEventListener('mousedown', (e) => {
+        canvas.addEventListener('touchstart', function(e){
+    let touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
-    const worldPoint = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+    const worldPoint = screenToWorld(touch.clientX - rect.left, touch.clientY - rect.top);
     const snappedPoint = getSnappedPoint(worldPoint.x, worldPoint.y, parseInt(document.getElementById('grid-size').value));
 
     if (isDrawing) {
@@ -337,6 +338,7 @@
 
         }
     }
+    canvas.removeEventListener('touchend', arguments.callee);
     });
 
         // Handle dragging the canvas (for moving around when zoomed)
