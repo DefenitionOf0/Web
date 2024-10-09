@@ -329,6 +329,7 @@
 
         // Handle dragging the canvas (for moving around when zoomed)
         canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault()
             if (!isDrawing) {
                 isDragging = true;
                 startX = e.clientX - offsetX;
@@ -336,7 +337,8 @@
             }
         });
 
-        canvas.addEventListener('touchmove', (e) => {
+        canvas.addEventListener('touchmove', (e) => { 
+            e.preventDefault()
             if (isDragging && !isDrawing) {
                 offsetX = e.clientX - startX;
                 offsetY = e.clientY - startY;
