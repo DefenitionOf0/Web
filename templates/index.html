@@ -318,7 +318,7 @@
         });
 
         // Handle dragging the canvas (for moving around when zoomed)
-        canvas.addEventListener('mousedown', (e) => {
+        canvas.addEventListener('touchstart', (e) => {
             if (!isDrawing) {
                 isDragging = true;
                 startX = e.clientX - offsetX;
@@ -326,7 +326,7 @@
             }
         });
 
-        canvas.addEventListener('mousemove', (e) => {
+        canvas.addEventListener('touchmove', (e) => {
             if (isDragging && !isDrawing) {
                 offsetX = e.clientX - startX;
                 offsetY = e.clientY - startY;
@@ -335,11 +335,11 @@
             }
         });
 
-        canvas.addEventListener('mouseup', () => {
+        canvas.addEventListener('touchstop', () => {
             isDragging = false;
         });
 
-        canvas.addEventListener('mouseleave', () => {
+        canvas.addEventListener('touchleave', () => {
             isDragging = false;
         });
 
