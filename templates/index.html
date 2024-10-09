@@ -46,59 +46,59 @@
 </div>
 </div>
             <div class="col-md-3" id="toolbar">
-                <h3>Toolbar</h3>
+                <h3>Инструменты</h3>
                 <div>
-                    <label for="zero_pointx">Zero point X:</label>
+                    <label for="zero_pointx">Исходная точка X:</label>
                     <input type="number" id="zero_pointx" value="0" min="0">
     </div>
                 <div>
                 <div>
-                    <label for="zero_pointy">Zero point Y:</label>
+                    <label for="zero_pointy">Исходная точка Y:</label>
                     <input type="number" id="zero_pointy" value="0" min="0">
         </div>
                 <div>
-                    <label for="grid-size">Grid Size (mm):</label>
+                    <label for="grid-size">Размер сетки (мм):</label>
                     <input type="reset" id="grid-size" value="1">
         </div>
                 <div>
-                    <label for="color">Line Color:</label>
+                    <label for="color">Цвет линии:</label>
                     <input type="color" id="color" value="#000000">
         </div>
                 <div>
-                    <label for="point-color">Point Color:</label>
+                    <label for="point-color">Цвет точки:</label>
                     <input type="color" id="point-color" value="#ff0000">
         </div>
                 <div>
-                    <label for="point-size">Point Size:</label>
-                    <input type="reset" id="point-size" value="70" min="1">
+                    <label for="point-size">Размер точки(отн. мировых):</label>
+                    <input type="reset" id="point-size" value="100">
         </div>
                 <div>
-                    <button id="undo" class="btn btn-secondary">Undo</button>
-                    <button id="redo" class="btn btn-secondary">Redo</button>
+                    <button id="undo" class="btn btn-secondary">Назад</button>
+                    <button id="redo" class="btn btn-secondary">Вперед</button>
         </div>
 
                 <div>
-                    <h5>Upload Background</h5>
+                    <h5>Загрузить фон</h5>
                     <input type="file" id="uploadImage">
-                    <label for="transparency">Transparency:</label>
+                    <label for="transparency">Прозрачность фона:</label>
                     <input type="range" id="transparency" min="0" max="1" step="0.1" value="1">
         </div>
                 <div>
-                    <label for="zoom">Zoom (Canvas):</label>
+                    <label for="zoom">Зум сетки:</label>
                     <input type="range" id="zoom" min="30" max="100" step="0.1" value="30">
         </div>
                 <div>
-                    <label for="background-zoom">Zoom (Background):</label>
+                    <label for="background-zoom">Зум фона:</label>
                     <input type="range" id="background-zoom" min="0.1" max="1" step="0.1" value="0.5">
         </div>
                 <div>
-                    <button id="toggle-mode" class="btn btn-primary">Switch to Draw Mode</button>
+                    <button id="toggle-mode" class="btn btn-primary">В режим рисования</button>
         </div>
                 <div>
-                    <button id="toggle-draw-type" class="btn btn-primary">Switch to Arc Mode</button>
+                    <button id="toggle-draw-type" class="btn btn-primary">Дуга</button>
         </div>
                 <div>
-                    <h5>Points</h5>
+                    <h5>Точки</h5>
                     <ul id="points-list"></ul>
         </div>
     </div>
@@ -445,7 +445,7 @@
         document.getElementById('toggle-mode').textContent = 'Switch to Pan Mode';
     } else {
         canvas.classList.remove('drawing-mode');
-        document.getElementById('toggle-mode').textContent = 'Switch to Draw Mode';
+        document.getElementById('toggle-mode').textContent = 'В режим перетаскивания';
     }
     });
 
@@ -453,7 +453,7 @@
         document.getElementById('toggle-draw-type').addEventListener('click', () => {
     if (drawType === 'line') {
         drawType = 'arc';
-        document.getElementById('toggle-draw-type').textContent = 'Switch to Line Mode';
+        document.getElementById('toggle-draw-type').textContent = 'Линия';
     } else {
         drawType = 'line';
         document.getElementById('toggle-draw-type').textContent = 'Switch to Arc Mode';
