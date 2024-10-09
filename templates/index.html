@@ -442,10 +442,10 @@
     isDrawing = !isDrawing;
     if (isDrawing) {
         canvas.classList.add('drawing-mode');
-        document.getElementById('toggle-mode').textContent = 'Switch to Pan Mode';
+        document.getElementById('toggle-mode').textContent = 'В режим перетаскивания';
     } else {
         canvas.classList.remove('drawing-mode');
-        document.getElementById('toggle-mode').textContent = 'В режим перетаскивания';
+        document.getElementById('toggle-mode').textContent = 'В режим рисования';
     }
     });
 
@@ -456,7 +456,7 @@
         document.getElementById('toggle-draw-type').textContent = 'Линия';
     } else {
         drawType = 'line';
-        document.getElementById('toggle-draw-type').textContent = 'Switch to Arc Mode';
+        document.getElementById('toggle-draw-type').textContent = 'Дуга';
     }
     });
 
