@@ -220,9 +220,15 @@
         function getSnappedPoint(x, y, gridSize) {
     const scaledGridSize = gridSize; // No zoom scaling for snapping
     // Snap x and y to nearest grid line
-    const snappedX = Math.round(x / scaledGridSize) * scaledGridSize;
-    const snappedY = Math.round(y / scaledGridSize) * scaledGridSize;
-
+     for (let i = 0; i < ((y / scaledGridSize) * scaledGridSize); i++) {
+        for (let j = 0; j < ((x / scaledGridSize) * scaledGridSize); j++) {
+          const color = ctx.getImageData(j, i, 30, 30).data;
+          if (color[2] <= 10 && color[0] <= 10) {
+            const snappedX = j;
+            const snappedY = i;
+          }
+        }
+    }
     return {
         x: snappedX,
         y: snappedY
