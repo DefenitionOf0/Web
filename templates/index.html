@@ -217,22 +217,20 @@
     }
 
         // Function to calculate the nearest intersection for snapping
-        function getSnappedPoint(x, y, gridSize) {
-    const scaledGridSize = gridSize; // No zoom scaling for snapping
-    // Snap x and y to nearest grid line
-     for (let i = 0; i < ((y / scaledGridSize) * scaledGridSize); i++) {
-        for (let j = 0; j < ((x / scaledGridSize) * scaledGridSize); j++) {
-          const color = ctx.getImageData(j, i, 30, 30).data;
-          if (color[2] <= 10 && color[0] <= 10) {
-            const snappedX = j;
-            const snappedY = i;
-          }
+    function getSnappedPoint(x, y, gridSize) {
+        const scaledGridSize = gridSize; // No zoom scaling for snapping
+        // Snap x and y to nearest grid line
+        let ry = Math.round(y / scaledGridSize) * scaledGridSize;
+        let rx = Math.round(x / scaledGridSize) * scaledGridSize;
+         for (let i = 0; i < ry; i++) {
+            for (let j = 0; j < ry; j++) {
+              const color = ctx.getImageData(j, i, 30, 30).data;
+              if (color[2] <= 10 && color[0] <= 10) {
+                const snappedX = j;
+                const snappedY = i;
+              }
+            }
         }
-    }
-    return {
-        x: snappedX,
-        y: snappedY
-    };
     }
 
         // Function to convert screen coordinates to world coordinates for correct positioning when zoomed
