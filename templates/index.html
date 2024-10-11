@@ -220,16 +220,19 @@
     function getSnappedPoint(x, y, gridSize) {
         const scaledGridSize = gridSize; // No zoom scaling for snapping
         // Snap x and y to nearest grid line
-        let ry = Math.round(y / scaledGridSize) * scaledGridSize;
-        let rx = Math.round(x / scaledGridSize) * scaledGridSize;
-         for (let i = 0; i < ry; i++) {
-            for (let j = 0; j < ry; j++) {
-              const color = ctx.getImageData(j, i, 30, 30).data;
-              if (color[2] <= 10 && color[0] <= 10) {
-                const snappedX = j;
-                const snappedY = i;
-              }
-            }
+        let ryx = worldToScreen({y: ((y / scaledGridSize) * scaledGridSize), x: ((x / scaledGridSize) * scaledGridSize)});
+        let dc = document.getElementById('drawingCanvas').getContext('2d');
+        const color = dc.getImageData(ryx.x, ryx.y, 1, 1);
+        let cd = {r: color.data[0], g: color.data[1], b: color.data[2]};
+         //alert([cd.r, cd.g, cd.b]);
+            if (parseInt(cd.r) <= 10 && parseInt(cd.g) <= 10 &&  parseInt(cd.b) <= 10) {
+                let rxy = screenToWorld(ryx.x, ryx.y);
+                const snappedX = parseInt(rxy.x);
+                const snappedY = parseInt(rxy.y);
+                return {
+                  x:snappedX,
+                  y:snappedY
+            };
         }
     }
 
