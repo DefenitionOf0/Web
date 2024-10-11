@@ -92,7 +92,7 @@
         </div>
                 <div>
                     <label for="background-zoom">Зум фона:</label>
-                    <input type="range" id="background-zoom" min="0.1" max="1" step="0.1" value="0.5">
+                    <input type="range" id="background-zoom" min="1" max="10" step="1" value="1">
         </div>
                 <div>
                     <button id="toggle-mode" class="btn btn-primary">В режим рисования</button>
@@ -125,7 +125,7 @@
         let backgroundImage = new Image();
         let backgroundLoaded = false;
         let zoomLevel = 30;
-        let backgroundZoomLevel = 0.5;
+        let backgroundZoomLevel = 1;
         let isDragging = false;
         let isDrawing = false; // Default to pan mode
         let startX, startY;
@@ -181,7 +181,7 @@
         // Function to draw the grid
         function drawGrid(gridSize) {
     gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height); // Clear grid canvas
-    gridCtx.strokeStyle = "rgba(0, 0, 0, 0.6)"; // Light grey grid with transparency
+    gridCtx.strokeStyle = "rgba(0, 255, 0, 0.6)"; // Light grey grid with transparency
 
     const scaledGridSize = gridSize * zoomLevel; // Apply zoom level to grid size
     const originX = gridCanvas.width / 2 + offsetX;
@@ -221,19 +221,21 @@
         const scaledGridSize = gridSize; // No zoom scaling for snapping
         // Snap x and y to nearest grid line
         let ryx = worldToScreen({y: ((y / scaledGridSize) * scaledGridSize), x: ((x / scaledGridSize) * scaledGridSize)});
-        let dc = document.getElementById('drawingCanvas').getContext('2d');
-        const color = dc.getImageData(ryx.x, ryx.y, 1, 1);
-        let cd = {r: color.data[0], g: color.data[1], b: color.data[2]};
-         //alert([cd.r, cd.g, cd.b]);
-            if (parseInt(cd.r) <= 10 && parseInt(cd.g) <= 10 &&  parseInt(cd.b) <= 10) {
+              let dc = document.getElementById('drawingCanvas').getContext('2d');
+              const color = dc.getImageData(ryx.x, ryx.y, 1, 1);
+              let cd = {r: color.data[0], g: color.data[1], b: color.data[2]};
+              //alert([cd.r, cd.g, cd.b]);
+              if (parseInt(cd.r) <= 10 && parseInt(cd.g) <= 10 &&  parseInt(cd.b) <= 10) {
                 let rxy = screenToWorld(ryx.x, ryx.y);
                 const snappedX = parseInt(rxy.x);
                 const snappedY = parseInt(rxy.y);
                 return {
                   x:snappedX,
                   y:snappedY
-            };
-        }
+                };
+              }
+            
+        
     }
 
         // Function to convert screen coordinates to world coordinates for correct positioning when zoomed
@@ -305,16 +307,18 @@
     const pointColor = document.getElementById('point-color').value;
     const screenPoint = worldToScreen(point);
     ctx.fillStyle = pointColor;
+    
     ctx.beginPath();
     ctx.arc(screenPoint.x, screenPoint.y, pointSize / zoomLevel, 0, Math.PI * 2); // Adjust size for zoom
     ctx.fill();
     }
 
         // Handling mouse clicks for drawing points, lines, and arcs
-        canvas.addEventListener('touchstart', function(e){
+        canvas.addEventListener('touchmove', function(e){
     let touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     const worldPoint = screenToWorld(touch.clientX - rect.left, touch.clientY - rect.top);
+    
     const snappedPoint = getSnappedPoint(worldPoint.x, worldPoint.y, parseInt(document.getElementById('grid-size').value));
 
     if (isDrawing) {
@@ -349,8 +353,8 @@
         }
     }
     });
-    canvas.addEventListener('touchend', function() {
-    canvas.removeEventListener('touchend', arguments.callee);
+    canvas.addEventListener('tochcancel', function() {
+    canvas.removeEventListener('touchcancel', canvas);
     });
         // Handle dragging the canvas (for moving around when zoomed)
         canvas.addEventListener('touchstart', function(event) {
