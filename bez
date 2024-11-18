@@ -1,0 +1,137 @@
+from matplotlib import patches
+from matplotlib.path import Path
+import matplotlib.pyplot as plt
+from fontTools.ttLib import TTFont
+import numpy as np
+
+def render_text_to_gcode(font_path, text, height, tolerance=0.1, fixed_radius=None, output_gcode_path="output.gcode"):
+    """
+    Renders a text phrase using glyphs and exports to G-code.
+    """
+    font = TTFont(font_path)
+    glyph_set = font.getGlyphSet()
+
+    # Load font metrics
+    cmap = font.getBestCmap()
+    scale_factor = height / font["head"].unitsPerEm  # Scale based on the font's units per em
+
+    # G-code commands
+    gcode_commands = []
+
+    # Initialize matplotlib plot
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal', adjustable='datalim')
+
+    # Start position for drawing
+    current_x = 0
+    current_y = 0
+
+    for char in text:
+        glyph_name = cmap.get(ord(char))
+        if glyph_name is None:
+            current_x += 200  # Advance for undefined characters (e.g., spaces)
+            continue
+
+        glyph = glyph_set[glyph_name]
+
+        # Create pen for glyph rendering
+        pen = OptimizedGlyphPen(glyph_set, tolerance=tolerance, scale_factor=scale_factor, fixed_radius=fixed_radius)
+        glyph.draw(pen)
+
+        # Debugging glyph path
+        print(f"Glyph: {char}, Path: {pen.path}")
+
+        path_data = []
+        current_position = (current_x, current_y)
+
+        for command, *args in pen.path:
+            if command == 'moveTo':
+                current_position = (args[0][0] + current_x, -args[0][1])  # Invert Y-axis
+                path_data.append((Path.MOVETO, current_position))
+                gcode_commands.append(f"G0 X{current_position[0]:.2f} Y{current_position[1]:.2f}")
+            elif command == 'lineTo':
+                x, y = args[0]
+                target_position = (x + current_x, -y)
+                path_data.append((Path.LINETO, target_position))
+                gcode_commands.append(f"G1 X{target_position[0]:.2f} Y{target_position[1]:.2f}")
+                current_position = target_position
+            elif command == 'curveTo':
+                # Bézier curve: approximation for G-code
+                control1, control2, end = args
+                bezier_points = bezier_approximation(
+                    np.array([current_position, control1, control2, (end[0] + current_x, -end[1])]), n=10
+                )
+                for bx, by in bezier_points:
+                    gcode_commands.append(f"G1 X{bx:.2f} Y{by:.2f}")
+                current_position = (end[0] + current_x, -end[1])
+            elif command == 'closePath':
+                path_data.append((Path.CLOSEPOLY, current_position))
+                gcode_commands.append("G0 Z5")  # Lift the tool
+
+        # Convert path_data to a Path object and add to plot
+        if path_data:
+            codes, vertices = zip(*path_data)
+            path = Path(vertices, codes)
+            patch = patches.PathPatch(path, facecolor='none', edgecolor='black', lw=1)
+            ax.add_patch(patch)
+
+        # Advance position by glyph width
+        current_x += glyph.width * scale_factor
+
+    # Save G-code to file
+    with open(output_gcode_path, "w") as gcode_file:
+        gcode_file.write("\n".join(gcode_commands))
+
+    # Plot final result
+    plt.gca().invert_yaxis()
+    plt.show()
+
+
+def bezier_approximation(control_points, n=20):
+    """
+    Approximates a Bézier curve using control points and returns n evenly spaced points.
+    """
+    t_values = np.linspace(0, 1, n)
+    curve = []
+    for t in t_values:
+        p = (1 - t) ** 3 * control_points[0] + \
+            3 * (1 - t) ** 2 * t * control_points[1] + \
+            3 * (1 - t) * t ** 2 * control_points[2] + \
+            t ** 3 * control_points[3]
+        curve.append(p)
+    return np.array(curve)
+
+
+# Optimized pen implementation (simplified for brevity)
+class OptimizedGlyphPen:
+    def __init__(self, glyph_set, tolerance, scale_factor, fixed_radius=None):
+        self.glyph_set = glyph_set
+        self.path = []
+        self.scale_factor = scale_factor
+        self.tolerance = tolerance
+        self.fixed_radius = fixed_radius
+
+    def _scale(self, point):
+        return point[0] * self.scale_factor, point[1] * self.scale_factor
+
+    def moveTo(self, p0):
+        self.path.append(('moveTo', self._scale(p0)))
+
+    def lineTo(self, p1):
+        self.path.append(('lineTo', self._scale(p1)))
+
+    def curveTo(self, *points):
+        scaled_points = [self._scale(p) for p in points]
+        self.path.append(('curveTo', *scaled_points))
+
+    def closePath(self):
+        self.path.append(('closePath',))
+
+    def endPath(self):
+        pass
+
+
+# Example usage
+font_path = "your-font-file.ttf"
+text = "Hello, World!"
+render_text_to_gcode(font_path, text, height=200, tolerance=0.1, fixed_radius=10, output_gcode_path="output.gcode")
